@@ -35,16 +35,29 @@ script:
 - export DB_IMAGE=`jq -r '.builds[0].artifact_id' db-output.json`
 - echo $DB_IMAGE
 - cd ..
-- gcloud compute instances create "travis-reddit-app" --image "$APP_IMAGE" 
+- gcloud compute instances create "travis-reddit-app"
+  --image "$APP_IMAGE" --machine-type "f1-micro"
   --project $PROJECT --zone "europe-west1-b"
-- gcloud compute instances create "travis-reddit-db" --image "$DB_IMAGE"
+- gcloud compute instances create "travis-reddit-db"
+  --image "$DB_IMAGE" --machine-type "f1-micro"
   --project $PROJECT --zone "europe-west1-b"
 - export EXTERNAL_IP=`gcloud compute instances list --project $PROJECT
   --filter="name=travis-reddit-app" --format='value(EXTERNAL_IP)'`
 - echo $EXTERNAL_IP
+- export DB_IP=`gcloud compute instances list --project $PROJECT 
+  --filter="name=travis-reddit-db" --format='value(INTERNAL_IP)'`
+- echo $DB_LOCAL_IP
+- export DB_IP=`gcloud compute instances list --project $PROJECT 
+  --filter="name=travis-reddit-db" --format='value(EXTERNAL_IP)'`
+- echo $DB_EXTERNAL_IP
+- ssh -o StrictHostKeyChecking=no -i google_compute appuser@$DB_EXTERNAL_IP '
+    apt-get update;
+    apt-get install -y socat;
+    socat TCP-LISTEN:8017,reuseaddr,fork,su=nobody TCP:127.0.0.1:27017 &'
 - ssh -o StrictHostKeyChecking=no -i google_compute appuser@$EXTERNAL_IP '
     git clone https://github.com/Otus-DevOps-2017-11/reddit.git;
     cd reddit && bundle install;
+    export DATABASE_URL=$DB_LOCAL_IP:8017
     puma -d'
 - sleep 5 && curl -s -o /dev/null -I -w "%{http_code}" --retry 10 --retry-delay 10
   $EXTERNAL_IP:9292
