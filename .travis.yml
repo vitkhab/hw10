@@ -3,9 +3,10 @@ language: python
 cache:
   directories:
   - "$HOME/google-cloud-sdk/"
+  - "$HOME/bin/"
 env:
 - PROJECT="docker-181710"
-  PATH=$PATH:${HOME}/google-cloud-sdk/bin
+  PATH=$PATH:${HOME}/google-cloud-sdk/bin:${HOME}/bin
   CLOUDSDK_CORE_DISABLE_PROMPTS=1
   GOOGLE_APPLICATION_CREDENTIALS="credentials.json"
 before_install:
@@ -19,8 +20,9 @@ before_install:
 - gcloud auth activate-service-account --key-file credentials.json
 install:
 - pip install -r ansible/requirements.txt
-- wget https://releases.hashicorp.com/packer/1.1.3/packer_1.1.3_linux_amd64.zip
-- unzip packer_1.1.3_linux_amd64.zip
+- if [ ! -e ${HOME}/bin/packer ];
+  then wget https://releases.hashicorp.com/packer/1.1.3/packer_1.1.3_linux_amd64.zip;
+  unzip packer_1.1.3_linux_amd64.zip -d $HOME/bin/; fi
 script:
 - packer build -var "project_id=$PROJECT" -var "source_image=ubuntu-1604-lts" packer/app.json
 - export APP_IMAGE=`jq -r '.builds[0].artifact_id' app-output.json`
