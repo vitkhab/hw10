@@ -24,12 +24,14 @@ install:
   then wget https://releases.hashicorp.com/packer/1.1.3/packer_1.1.3_linux_amd64.zip;
   unzip packer_1.1.3_linux_amd64.zip -d $HOME/bin/; fi
 script:
-- cd packer && packer build -var "project_id=$PROJECT" -var "source_image=ubuntu-1604-lts" app.json
-- export APP_IMAGE=`jq -r '.builds[0].artifact_id' packer/app-output.json`
+- cd packer
+- packer build -var "project_id=$PROJECT" -var "source_image=ubuntu-1604-lts" app.json
+- export APP_IMAGE=`jq -r '.builds[0].artifact_id' app-output.json`
 - echo $APP_IMAGE
-- cd packer && packer build -var "project_id=$PROJECT" -var "source_image=ubuntu-1604-lts" db.json
-- export DB_IMAGE=`jq -r '.builds[0].artifact_id' packer/db-output.json`
+- packer build -var "project_id=$PROJECT" -var "source_image=ubuntu-1604-lts" db.json
+- export DB_IMAGE=`jq -r '.builds[0].artifact_id' db-output.json`
 - echo $DB_IMAGE
+- cd ..
 - gcloud compute instances create "travis-reddit-app" --image "$APP_IMAGE" 
   --project $PROJECT --zone "europe-west1-b"
 - gcloud compute instances create "travis-reddit-db" --image "$DB_IMAGE
@@ -37,7 +39,7 @@ script:
 - export EXTERNAL_IP=`gcloud compute instances list --project $PROJECT
   --filter="name=travis-reddit-app" --format='value(EXTERNAL_IP)'`
 - echo $EXTERNAL_IP
-- ssh -o StrictHostKeyChecking=no appuser@$EXTERNAL_IP '
+- ssh -o StrictHostKeyChecking=no -i google_compute appuser@$EXTERNAL_IP '
     git clone https://github.com/Otus-DevOps-2017-11/reddit.git;
     cd reddit && bundle install;
     puma -d'
