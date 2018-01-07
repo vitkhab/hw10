@@ -53,11 +53,11 @@ script:
 - ssh -o StrictHostKeyChecking=no -i google_compute appuser@$DB_EXTERNAL_IP "
     sudo apt-get update;
     sudo apt-get install -y socat;
-    ( sudo socat TCP-LISTEN:8017,reuseaddr,fork,su=nobody TCP:127.0.0.1:27017 ) &"
+    ( sudo socat TCP-LISTEN:8017,reuseaddr,fork,su=nobody TCP:127.0.0.1:27017 &)"
 - ssh -o StrictHostKeyChecking=no -i google_compute appuser@$EXTERNAL_IP "
     git clone https://github.com/Otus-DevOps-2017-11/reddit.git;
     cd reddit && bundle install;
-    export DATABASE_URL=$DB_LOCAL_IP:8017
+    export DATABASE_URL=$DB_LOCAL_IP:8017;
     puma -d"
 - sleep 5 && curl -s -o /dev/null -I -w "%{http_code}" --retry 10 --retry-delay 10
   $EXTERNAL_IP:9292
