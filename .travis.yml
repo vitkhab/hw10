@@ -8,7 +8,7 @@ env:
 - PROJECT="docker-181710"
   PATH=$PATH:${HOME}/google-cloud-sdk/bin:${HOME}/bin
   CLOUDSDK_CORE_DISABLE_PROMPTS=1
-  GOOGLE_APPLICATION_CREDENTIALS="${HOME}/credentials.json"
+  GOOGLE_APPLICATION_CREDENTIALS="${TRAVIS_BUILD_DIR}/credentials.json"
 before_install:
 - openssl aes-256-cbc -K $encrypted_639693b2125e_key -iv $encrypted_639693b2125e_iv
   -in travis/secrets.zip.enc -out secrets.zip -d
