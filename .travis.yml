@@ -51,9 +51,9 @@ script:
   --filter="name=travis-reddit-app" --format='value(EXTERNAL_IP)'`
 - echo $EXTERNAL_IP
 - ssh -o StrictHostKeyChecking=no -i google_compute appuser@$DB_EXTERNAL_IP "
-    apt-get update;
-    apt-get install -y socat;
-    socat TCP-LISTEN:8017,reuseaddr,fork,su=nobody TCP:127.0.0.1:27017 &"
+    sudo apt-get update;
+    sudo apt-get install -y socat;
+    sudo socat TCP-LISTEN:8017,reuseaddr,fork,su=nobody TCP:127.0.0.1:27017 &"
 - ssh -o StrictHostKeyChecking=no -i google_compute appuser@$EXTERNAL_IP "
     git clone https://github.com/Otus-DevOps-2017-11/reddit.git;
     cd reddit && bundle install;
