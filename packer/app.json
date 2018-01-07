@@ -12,7 +12,7 @@
       "type": "googlecompute",
       "project_id": "{{user `project_id`}}",
       "image_name": "reddit-app-{{timestamp}}",
-      "source_image": "{{user `source_image`}}",
+      "source_image_family": "{{user `source_image`}}",
       "zone": "europe-west1-b",
       "ssh_username": "appuser",
       "machine_type": "{{user `machine_type`}}",
@@ -26,6 +26,13 @@
     {
       "type": "ansible",
       "playbook_file": "../ansible/packer_app.yml"
+    }
+  ],
+  "post-processors": [
+    {
+      "type": "manifest",
+      "output": "app-output.json",
+      "strip_path": true
     }
   ]
 }
