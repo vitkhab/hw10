@@ -34,7 +34,7 @@ script:
 - cd ..
 - gcloud compute instances create "travis-reddit-app" --image "$APP_IMAGE" 
   --project $PROJECT --zone "europe-west1-b"
-- gcloud compute instances create "travis-reddit-db" --image "$DB_IMAGE
+- gcloud compute instances create "travis-reddit-db" --image "$DB_IMAGE"
   --project $PROJECT --zone "europe-west1-b"
 - export EXTERNAL_IP=`gcloud compute instances list --project $PROJECT
   --filter="name=travis-reddit-app" --format='value(EXTERNAL_IP)'`
@@ -46,7 +46,8 @@ script:
 - sleep 5 && curl -s -o /dev/null -I -w "%{http_code}" --retry 10 --retry-delay 10
   $EXTERNAL_IP:9292
 after_script:
-- gcloud compute images delete --project $PROJECT -q $IMAGE
+- gcloud compute images delete --project $PROJECT -q $APP_IMAGE
+- gcloud compute images delete --project $PROJECT -q $DB_IMAGE
 - gcloud compute instances delete -q travis-reddit-app
   --project $PROJECT --zone "europe-west1-b"
 - gcloud compute instances delete -q travis-reddit-db
