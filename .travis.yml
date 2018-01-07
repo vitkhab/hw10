@@ -44,10 +44,10 @@ script:
 - export EXTERNAL_IP=`gcloud compute instances list --project $PROJECT
   --filter="name=travis-reddit-app" --format='value(EXTERNAL_IP)'`
 - echo $EXTERNAL_IP
-- export DB_IP=`gcloud compute instances list --project $PROJECT 
+- export DB_LOCAL_IP=`gcloud compute instances list --project $PROJECT 
   --filter="name=travis-reddit-db" --format='value(INTERNAL_IP)'`
 - echo $DB_LOCAL_IP
-- export DB_IP=`gcloud compute instances list --project $PROJECT 
+- export DB_EXTERNAL_IP=`gcloud compute instances list --project $PROJECT 
   --filter="name=travis-reddit-db" --format='value(EXTERNAL_IP)'`
 - echo $DB_EXTERNAL_IP
 - ssh -o StrictHostKeyChecking=no -i google_compute appuser@$DB_EXTERNAL_IP "
