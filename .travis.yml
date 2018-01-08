@@ -1,0 +1,91 @@
+sudo: false
+language: python
+branches:
+  only:
+    - "master"
+cache:
+  directories:
+  - "$HOME/google-cloud-sdk/"
+  - "$HOME/bin/"
+env:
+# Do not forget to change PROJECT var to yours value
+- PROJECT="docker-181710"
+  PATH=$PATH:${HOME}/google-cloud-sdk/bin:${HOME}/bin
+  CLOUDSDK_CORE_DISABLE_PROMPTS=1
+  GOOGLE_APPLICATION_CREDENTIALS="${TRAVIS_BUILD_DIR}/credentials.json"
+before_install:
+# Decrypt our secrets
+- openssl aes-256-cbc -K $encrypted_639693b2125e_key -iv $encrypted_639693b2125e_iv
+  -in travis/secrets.zip.enc -out secrets.zip -d
+- unzip secrets.zip
+# Install Google SDK
+- if [ ! -d "${HOME}/google-cloud-sdk/bin" ];
+  then rm -rf $HOME/google-cloud-sdk;
+  curl https://sdk.cloud.google.com | bash > /dev/null; fi
+- gcloud version
+# Auth on GCP
+- gcloud auth activate-service-account --key-file credentials.json
+install:
+# Isntall Ansible and prerequisites
+- pip install -r ansible/requirements.txt
+# Install Packer
+- if [ ! -e ${HOME}/bin/packer ];
+  then wget https://releases.hashicorp.com/packer/1.1.3/packer_1.1.3_linux_amd64.zip;
+  unzip packer_1.1.3_linux_amd64.zip -d $HOME/bin/; fi
+script:
+- cd packer
+# Create image for Application VM
+- packer build -var "project_id=$PROJECT" -var "source_image=ubuntu-1604-lts" app.json
+- export APP_IMAGE=`jq -r '.builds[0].artifact_id' app-output.json`
+- echo $APP_IMAGE
+# Create image for DB VM
+- packer build -var "project_id=$PROJECT" -var "source_image=ubuntu-1604-lts" db.json
+- export DB_IMAGE=`jq -r '.builds[0].artifact_id' db-output.json`
+- echo $DB_IMAGE
+- cd ..
+
+# Run DB VM
+- gcloud compute instances create "travis-reddit-db"
+  --image "$DB_IMAGE" --machine-type "f1-micro"
+  --project $PROJECT --zone "europe-west1-b"
+- export DB_LOCAL_IP=`gcloud compute instances list --project $PROJECT 
+  --filter="name=travis-reddit-db" --format='value(INTERNAL_IP)'`
+- echo $DB_LOCAL_IP
+- export DB_EXTERNAL_IP=`gcloud compute instances list --project $PROJECT 
+  --filter="name=travis-reddit-db" --format='value(EXTERNAL_IP)'`
+- echo $DB_EXTERNAL_IP
+# Universal fix
+- sleep 30
+# Hack to allow connection to MongoDB without configuring it
+- ssh -o StrictHostKeyChecking=no -i google_compute appuser@$DB_EXTERNAL_IP "
+    sudo apt-get update;
+    sudo apt-get install -y socat;
+    nohup sudo socat TCP-LISTEN:8017,reuseaddr,fork,su=nobody TCP:127.0.0.1:27017 > /dev/null 2>&1 &"
+
+# Run Application VM 
+- gcloud compute instances create "travis-reddit-app"
+  --image "$APP_IMAGE" --machine-type "f1-micro"
+  --project $PROJECT --zone "europe-west1-b"
+- export EXTERNAL_IP=`gcloud compute instances list --project $PROJECT
+  --filter="name=travis-reddit-app" --format='value(EXTERNAL_IP)'`
+- echo $EXTERNAL_IP
+# Universal fix
+- sleep 30
+# Deploy application by hand
+- ssh -o StrictHostKeyChecking=no -i google_compute appuser@$EXTERNAL_IP "
+    git clone https://github.com/Otus-DevOps-2017-11/reddit.git;
+    cd reddit && bundle install;
+    export DATABASE_URL=$DB_LOCAL_IP:8017;
+    puma -d"
+
+# Testing
+- sleep 5 && curl -s -o /dev/null -I -w "%{http_code}" --retry 10 --retry-delay 10
+  $EXTERNAL_IP:9292
+after_script:
+# Cleaning up
+- gcloud compute images delete --project $PROJECT -q $APP_IMAGE
+- gcloud compute images delete --project $PROJECT -q $DB_IMAGE
+- gcloud compute instances delete -q travis-reddit-app
+  --project $PROJECT --zone "europe-west1-b"
+- gcloud compute instances delete -q travis-reddit-db
+  --project $PROJECT --zone "europe-west1-b"
